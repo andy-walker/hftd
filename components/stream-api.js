@@ -3,7 +3,7 @@
  */
 
 var streamAPI = function() {
-    streamAPI.rateStream = {};
+    
 };
 
 /**
@@ -21,6 +21,8 @@ streamAPI.prototype.start = function(callback) {
     
     var splitInstruments = streamAPI.splitInstruments(instruments);
     
+    streamAPI.rateStream = {};
+
     // initialize rate stream A
     streamAPI.rateStream.A = new streamAPI.createRateStream(splitInstruments[0], streamAPI.onTickUpdate);
     
