@@ -83,7 +83,7 @@ streamAPI.prototype.createRateStream = function(instruments, tickUpdateCallback)
 
     var account = hftd.config.account;
 
-    var domain = 'stream-fxtrade.oanda.com'
+    var domain = 'stream-sandbox.oanda.com'
     var access_token = account.accessToken;
     var account_id = account.accountId;
 
