@@ -8,7 +8,7 @@ var chartist = function() {
     chartist.candles   = {};
     chartist.haCandles = {};
 
-    // store 360 candles (around half an hour's worth at S5)
+    // store 360 candles (around half an hour's worth of S5 data)
     chartist.maxCacheSize = 360;
     hftd.streamAPI.getInstrumentList().forEach(function(instrument) {
         // just collect S5 data for now ..
@@ -21,7 +21,7 @@ var chartist = function() {
 /**
  * Delete expired entries from cache
  */
-chartist.prototype.deleteOldEntries = function(time, instrument) {
+chartist.prototype.deleteOldEntries = function(instrument) {
     for (var interval in chartist.candles[instrument])
         while (chartist.candles[instrument][interval].length > chartist.maxCacheSize)
             chartist.candles[instrument][interval].shift(); 
@@ -31,27 +31,52 @@ chartist.prototype.deleteOldEntries = function(time, instrument) {
  * Get the last candle from the cache for instrument / interval
  */
 chartist.prototype.getLastCandle(instrument, interval) {
-    return chartist.candles[instrument][interval].slice(-1)[0];
+    return _.last(chartist.candles[instrument][interval]);
 };
 
 /**
  * Get the start time for candle based on tick timestamp and interval
  */
- chartist.getNextCandleStart(tickTimestamp, interval) {
+chartist.prototype.getNextCandleStart(tickTimestamp, interval) {
     // currently only supports S5
     switch (interval) {
         case "S5":
-            // todo
-            break;
+            return tickTimestamp - (tickTimestamp % 5);
     }
- };
+};
+
+/**
+ * Retrieve a set of candles
+ */
+chartist.prototype.getCandles = function(instrument, interval, numCandles, type) {
+    
+    var candles;
+    type = type || 'c';
+
+    switch (type) {
+        case 'c':
+            candles = chartist.candles[instrument][interval].slice(0 - numCandles);
+            break;
+        case 'ha':
+            candles = chartist.haCandles[instrument][interval].slice(0 - numCandles);
+            break;
+        default:
+            hftd.error(sprintf("Unrecognized candle type: '%s'", type));
+            return;
+    }
+    
+    // if we don't yet have sufficient data to fulfil the request, return false
+    if (candles.length < numCandles)
+        return false;
+
+    return candles;
+
+}
 
 /**
  * When new tick received, update internal cache
  */
 chartist.prototype.onTick = function(tick) {
-
-    hftd.log('chartist update');
     
     var instrument    = tick.instrument;
     var tickTimestamp = getTimestamp(tick.time);

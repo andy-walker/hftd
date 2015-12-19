@@ -25,7 +25,6 @@ hftd.strategist  = new require('./components/strategist')();
 /**
  * Initialize / start components
  */
-
 async.series([
     
     // initialize strategies
