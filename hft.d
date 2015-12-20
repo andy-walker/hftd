@@ -33,13 +33,15 @@ async.series([
     // initialize api connections
     hftd.streamAPI.start,
     //hftd.restAPI.start,
+    //hftd.data.initialize,
     /*
     // initialize components
     // hftd.chartist.start,
     hftd.servicePort.start,
-    hftd.execution.start,
-
     */
+    //hftd.execution.start,
+
+
 ],  function(error) {
         if (error)
             hftd.log(error, 'error');

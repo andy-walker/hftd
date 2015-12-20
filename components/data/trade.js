@@ -13,7 +13,11 @@ trade.prototype.initialize = function(callback) {
     trade.refreshCacheFromDisk();
 };
 
-trade.prototype.refreshCacheFromDisk() {
+trade.prototype.get = function(params) {
+
+};
+
+trade.refreshCacheFromDisk = function() {
     var fs = hftd.data.fs;
 };
 

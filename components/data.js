@@ -1,12 +1,14 @@
 /**
- * HFTD data component
+ * Component for persistent data storage
  */
 var data = function() {
 	data.fs    = require('fs');
-	data.trade = new require('./data/trade')();
 };
 
+data.prototype.trade = new require('./data/trade')();
+
 data.prototype.initialize = function(callback) {
+	hftd.log('Initializing data components ...');
 	data.trade.initialize();
 	callback();
 };
