@@ -100,6 +100,11 @@ global.getParams = function() {
 
 };
 
+global.getPercentageDifference = function(a, b) {
+    var difference = ((b - a) / b) * 100;
+    return Math.sqrt(difference * difference);
+};
+
 /**
  * Convert date string to unix timestamp
  */

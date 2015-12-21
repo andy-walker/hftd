@@ -66,9 +66,9 @@ streamAPI.prototype.getInstrumentList = function() {
 streamAPI.prototype.onTickUpdate = function(tick) {
     
     if (tick.heartbeat !== undefined) {
-        hftd.log('Heartbeat');
+        //hftd.log('Heartbeat');
     } else if (tick.tick !== undefined) {
-        hftd.log(sprintf('%s: %s <=> %s', tick.tick.instrument, tick.tick.bid, tick.tick.ask));
+        //hftd.log(sprintf('%s: %s <=> %s', tick.tick.instrument, tick.tick.bid, tick.tick.ask));
         hftd.chartist.onTick(tick.tick);
         hftd.strategist.onTick(tick.tick);
         //var tickTimestamp = getTimestamp(tick.tick.time);
