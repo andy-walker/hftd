@@ -27,19 +27,19 @@ hftd.strategist  = new require('./components/strategist')();
  */
 async.series([
     
-    // initialize strategies
-    hftd.strategist.start,
-
     // initialize api connections
     hftd.streamAPI.start,
-    //hftd.restAPI.start,
+    hftd.restAPI.start,
     //hftd.data.initialize,
     /*
     // initialize components
     // hftd.chartist.start,
     hftd.servicePort.start,
     */
-    //hftd.execution.start,
+    hftd.execution.start,
+
+    // initialize strategies
+    hftd.strategist.start
 
 
 ],  function(error) {

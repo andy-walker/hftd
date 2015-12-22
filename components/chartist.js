@@ -13,13 +13,80 @@ var chartist = function() {
 
     // store 360 candles (around half an hour's worth of S5 data)
     chartist.maxCacheSize = 360;
-    hftd.streamAPI.getInstrumentList().forEach(function(instrument) {
+
+    // construct list of instruments to keep track of
+    chartist.instrumentList = hftd.streamAPI.getInstrumentList();
+
+    // initialize candlestick / tick data objects
+    chartist.instrumentList.forEach(function(instrument) {
         // just collect S5 data for now ..
         chartist.candles[instrument]   = {"S5": []};
         chartist.haCandles[instrument] = {"S5": []};
         chartist.tickData[instrument]  = [];
     
     });
+
+    /**
+     * Convert an amount
+     */
+    chartist.convert = function(amount, fromCurrency, toCurrency) {
+        
+        if (fromCurrency == toCurrency)
+            return amount;
+
+        var pair;
+
+        if (_.contains(chartist.instrumentList, fromCurrency + '_' + toCurrency)) {
+            pair = fromCurrency + '_' + toCurrency;
+        } else if (_.contains(chartist.instrumentList, toCurrency + '_' + fromCurrency)) {
+            pair = toCurrency + '_' + fromCurrency;
+        }
+
+        if (!pair) {
+            // attempt to convert amounts for which there is no direct pair
+            switch (true) {
+                case fromCurrency == 'DE30' && toCurrency == 'USD':
+                    return chartist.convert(chartist.convert(amount, 'DE30', 'EUR'), 'EUR', 'USD');
+                case fromCurrency == 'USD' && toCurrency == 'DE30':
+                    return chartist.convert(chartist.convert(amount, 'USD', 'EUR'), 'EUR', 'DE30');
+                case fromCurrency == 'HK33' && toCurrency == 'USD':
+                    return chartist.convert(chartist.convert(amount, 'HK33', 'HKD'), 'HKD', 'USD');
+                case fromCurrency == 'USD' && toCurrency == 'HK33':
+                    return chartist.convert(chartist.convert(amount, 'USD', 'HKD'), 'HKD', 'HK33');
+                case fromCurrency == 'UK100' && toCurrency == 'USD':
+                    return chartist.convert(chartist.convert(amount, 'UK100', 'GBP'), 'GBP', 'USD');
+                case fromCurrency == 'USD' && toCurrency == 'UK100':
+                    return chartist.convert(chartist.convert(amount, 'USD', 'GBP'), 'GBP', 'UK100');
+                case fromCurrency == 'DE10YB' && toCurrency == 'USD':
+                    return chartist.convert(chartist.convert(amount, 'DE10YB', 'EUR'), 'EUR', 'USD');
+                case fromCurrency == 'USD' && toCurrency == 'DE10YB':
+                    return chartist.convert(chartist.convert(amount, 'USD', 'EUR'), 'EUR', 'DE10YB');
+                case fromCurrency == 'USD' && toCurrency == 'UK10YB':
+                    return chartist.convert(chartist.convert(amount, 'USD', 'GBP'), 'GBP', 'UK10YB');
+                case fromCurrency == 'UK10YB' && toCurrency == 'USD':
+                    return chartist.convert(chartist.convert(amount, 'UK10YB', 'GBP'), 'GBP', 'USD');                   
+            
+            }
+            // for pairs that include GBP, convert via USD
+            if (fromCurrency == 'GBP') {
+                return chartist.convert(chartist.convert(amount, 'GBP', 'USD'), 'USD', toCurrency);
+            } else if (toCurrency == 'GBP') {
+                return chartist.convert(chartist.convert(amount, fromCurrency, 'USD'), 'USD', 'GBP');
+            }
+
+            return hftd.warning(sprintf('Chartist: Unable to convert %s to %s [ %s ]',
+                fromCurrency, toCurrency, color('FAIL', 'red')
+            ));
+
+        }
+        
+        // perform conversion
+        var quote   = chartist.getQuote(pair);
+        var reverse = pair.indexOf(fromCurrency) < pair.indexOf('_');
+
+        return (reverse ? amount * quote.ask : amount / quote.ask);
+
+    };
 
     /**
      * Delete expired entries from cache
@@ -38,7 +105,7 @@ var chartist = function() {
     };
 
     /**
-     * Get the start time for candle based on tick timestamp and interval
+     * Get the start time for candle based on tick timestamp && interval
      */
     chartist.getNextCandleStart = function(tickTimestamp, interval) {
         // currently only supports S5
@@ -75,6 +142,29 @@ var chartist = function() {
         return candles;
 
     }
+
+    /**
+     * Get bid/ask prices for the specified instrument
+     */
+    chartist.getQuote = function(instrument) {
+        
+        var quote;
+
+        // if we have tick data for the requested instrument, 
+        // get quote from last tick
+        if (chartist.tickData[instrument].length) {
+            quote = _.last(chartist.tickData[instrument]);
+        // otherwise, fall back to executionist quotes list
+        } else {
+            quote = hftd.execution.quotes[instrument];
+        }
+
+        return {
+            bid: quote.bid,
+            ask: quote.ask
+        };
+
+    };
 
     /**
      * When new tick received, update internal cache

@@ -29,6 +29,11 @@ hftd.error = function(message) {
     hftd.log(message, 'error');
 };
 
+hftd.fatal = function(message) {
+    hftd.error(message);
+    process.exit(1);
+};
+
 hftd.warning = function(message) {
     hftd.log(message, 'warning');
 };
