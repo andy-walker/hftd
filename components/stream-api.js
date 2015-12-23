@@ -11,7 +11,7 @@ var streamAPI = function() {
  */
 streamAPI.prototype.start = function(callback) {
     
-    hftd.log('Initializing Oanda rate stream connections ...');
+    hftd.log('Establishing Oanda rate stream connections ...');
 
     var streamAPI   = hftd.streamAPI;
     var instruments = streamAPI.getInstrumentList();
@@ -31,6 +31,11 @@ streamAPI.prototype.start = function(callback) {
     if (splitInstruments[1].length)
         streamAPI.rateStream.B = new streamAPI.createRateStream(splitInstruments[1], streamAPI.onTickUpdate);
     
+    hftd.log('Establishing Oanda event stream connection ...');
+    hftd.restAPI.client.subscribeEvents(function(event) {
+        hftd.execution.onEvent(event);
+    });
+
     callback();
 
 };

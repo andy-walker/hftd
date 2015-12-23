@@ -15,12 +15,16 @@ var execution = function() {
      * Close trade via rest api, delete local entry if successful
      */
     execution.closePosition = function(tradeId) {
+        
         hftd.log(sprintf('Closing trade %s ...', tradeId));
-        hftd.restAPI.closePosition(strategy, params, function(error, result) {
+
+        hftd.restAPI.client.closeTrade(tradeId, function(error, confirmation) {
             if (error)
                 return hftd.error(error);
+            delete execution.trades[tradeId];
             hftd.log(sprintf('Position closed - [ %s ]', color('OK', 'green')));
-        });   
+        });
+  
     };
 
     /**
@@ -56,16 +60,18 @@ var execution = function() {
     /**
      * Retrieve details for open position by strategy / instrument
      */
-    execution.getOpenPosition = function(strategy, instrument) {
-        /*return hftd.data.trade.get({
-            strategy: strategy,
-            instrument: instrument
-        });*/
+    execution.hasOpenPosition = function(strategy, instrument) {
+        for (var tid in execution.trades) {
+            var trade = execution.trades[tid];
+            if (trade.strategy == strategy && trade.instrument == instrument)
+                return true;
+        }
+        return false;
     };
 
     /**
      * Get pip precision on the specified instruments
-     * - necessary for rounding stopLoss / takeProfits correctly
+     * - necessary for rounding stop loss / take profit correctly
      */
     execution.getPipPrecision = function(instrument) {
 
@@ -108,26 +114,64 @@ var execution = function() {
     
     };
 
+    execution.onEvent = function(event) {
+        hftd.log('Received event:');
+        console.log(event);
+        switch (event.transaction.type) {
+            case 'STOP_LOSS_FILLED':
+                hftd.log(sprintf('Closed trade %s on %s (hit stop loss)', event.transaction.tradeId, event.transaction.instrument));
+                delete execution.trades[event.transaction.tradeId];
+                break;
+            case 'TAKE_PROFIT_FILLED':
+                hftd.log(sprintf('Closed trade %s on %s (hit take profit)', event.transaction.tradeId, event.transaction.instrument));
+                delete execution.trades[event.transaction.tradeId];
+                break;               
+        }
+    };
+
     /**
      * Open trade via rest api, create local data entry if successful
      */
     execution.openPosition = function(strategy, params) {
+        
         hftd.log(sprintf('%s: opening %s position on %s ...', strategy, params.direction, params.instrument));
+
         console.log(params);
-        /*
-        hftd.restAPI.openPosition(strategy, params, function(error, result) {
+
+        if (params.units < 1)
+            return hftd.error(sprintf('Minimum trade size must be 1 unit (supplied: %d)', params.units));
+        
+        if (params.side == 'long')
+            params.side = 'buy';
+        else if (params.side == 'short')
+            params.side = 'sell';
+
+        var account = hftd.config.account;
+        params.type = 'market';
+
+        hftd.restAPI.client.createOrder(account.accountId, params, function(error, confirmation) {
+            
             if (error)
                 return hftd.error(error);
-            hftd.data.trade.create(strategy, params, result);
-            hftd.log(sprintf('Trade successfully opened - [ %s ]', color('OK', 'green')));
+
+            if (typeof confirmation.tradeOpened !== 'undefined') {
+                params.strategy = strategy;
+                execution.trades[confirmation.tradeOpened.id] = params;
+            } else {
+                hftd.error('Unable to open trade on ' + params.instrument);
+                console.log(confirmation);
+            }
+
         });
-        */
+        
     };
 
     /**
      * Refresh internal data from api every minute
      */
     execution.refreshData = function() {
+
+        console.log(execution.trades);
 
         async.series([
             execution.updateAccount,
@@ -144,7 +188,9 @@ var execution = function() {
      * Initialize
      */
     execution.start = function(callback) {
+        
         hftd.log('Initializing execution model ...');
+        
         async.series([
             execution.updateAccount,
             execution.getInstruments,
@@ -156,8 +202,12 @@ var execution = function() {
             hftd.scheduler.addJob("0 * * * * *", execution.refreshData);
             callback();
         });
+
     };
 
+    /**
+     * Update account details from rest api
+     */
     execution.updateAccount = function(callback) {
         hftd.restAPI.client.getAccount(hftd.config.account.accountId, function(error, account) {
             if (error)

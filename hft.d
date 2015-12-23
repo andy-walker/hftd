@@ -28,8 +28,9 @@ hftd.strategist  = new require('./components/strategist')();
 async.series([
     
     // initialize api connections
-    hftd.streamAPI.start,
     hftd.restAPI.start,
+    hftd.streamAPI.start,
+
     //hftd.data.initialize,
     /*
     // initialize components
