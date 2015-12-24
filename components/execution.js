@@ -10,6 +10,7 @@ var execution = function() {
     execution.trades      = {};
     execution.instruments = {};
     execution.quotes      = {};
+    execution.pendingList = {};
 
     /**
      * Close trade via rest api, delete local entry if successful
@@ -66,6 +67,8 @@ var execution = function() {
             if (trade.strategy == strategy && trade.instrument == instrument)
                 return true;
         }
+        if (typeof execution.pendingList[instrument] !== 'undefined')
+            return true;
         return false;
     };
 
@@ -134,7 +137,7 @@ var execution = function() {
      */
     execution.openPosition = function(strategy, params) {
         
-        hftd.log(sprintf('%s: opening %s position on %s ...', strategy, params.direction, params.instrument));
+        hftd.log(sprintf('%s: opening %s position on %s ...', strategy, params.side, params.instrument));
 
         console.log(params);
 
@@ -149,10 +152,16 @@ var execution = function() {
         var account = hftd.config.account;
         params.type = 'market';
 
+        // push onto pending list, prevents multiple trades being opened in a fast moving market
+        execution.pendingList[params.instrument] = 1;
+
         hftd.restAPI.client.createOrder(account.accountId, params, function(error, confirmation) {
             
             if (error)
                 return hftd.error(error);
+
+            // remove from pending list
+            delete execution.pendingList[params.instrument];
 
             if (typeof confirmation.tradeOpened !== 'undefined') {
                 params.strategy = strategy;
