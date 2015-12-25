@@ -59,7 +59,34 @@ var execution = function() {
     };
 
     /**
+     * Get a list of open trades from broker and store in local data structures.
+     * This is used during initialization so we can restart / recover from a crash,
+     * and carry on from where we left off.
+     */
+    execution.getOpenPositions = function(completedCallback) {
+        
+        var account = hftd.strategist.getAccounts();
+
+        async.forEach(accounts, function(account, taskCallback) { 
+            hftd.restAPI.client.getOpenTrades(account.accountId, function(error, trades) {
+                if (error)
+                    taskCallback(error);
+                trades.forEach(function(trade) {
+                    execution.trades[trade.id] = trade;
+                });
+                taskCallback();
+            });     
+        }, function(error) {
+            if (error)
+                return hftd.error(error);
+            completedCallback();
+        });
+
+    };
+
+    /**
      * Retrieve details for open position by strategy / instrument
+     * @return bool
      */
     execution.hasOpenPosition = function(strategy, instrument) {
         for (var tid in execution.trades) {
@@ -67,14 +94,15 @@ var execution = function() {
             if (trade.strategy == strategy && trade.instrument == instrument)
                 return true;
         }
-        if (typeof execution.pendingList[instrument] !== 'undefined')
+        if (typeof execution.pendingList[strategy][instrument] !== 'undefined')
             return true;
         return false;
     };
 
     /**
-     * Get pip precision on the specified instruments
-     * - necessary for rounding stop loss / take profit correctly
+     * Get pip precision on the specified instruments, necessary for rounding 
+     * stop loss / take profits correctly - Oanda is pretty fussy about decimal precision
+     * @return int
      */
     execution.getPipPrecision = function(instrument) {
 
@@ -102,7 +130,7 @@ var execution = function() {
      */
     execution.getQuotes = function(callback) {
         
-        hftd.restAPI.client.getPrice(Object.keys(execution.instruments), function(error, prices) {
+        hftd.restAPI.client.getPrice(_.keys(execution.instruments), function(error, prices) {
             
             if (error)
                 callback(error);
@@ -153,7 +181,7 @@ var execution = function() {
         params.type = 'market';
 
         // push onto pending list, prevents multiple trades being opened in a fast moving market
-        execution.pendingList[params.instrument] = 1;
+        execution.pendingList[strategy][params.instrument] = 1;
 
         hftd.restAPI.client.createOrder(account.accountId, params, function(error, confirmation) {
             
@@ -161,7 +189,7 @@ var execution = function() {
                 return hftd.error(error);
 
             // remove from pending list
-            delete execution.pendingList[params.instrument];
+            delete execution.pendingList[strategy][params.instrument];
 
             if (typeof confirmation.tradeOpened !== 'undefined') {
                 params.strategy = strategy;
@@ -199,11 +227,17 @@ var execution = function() {
     execution.start = function(callback) {
         
         hftd.log('Initializing execution model ...');
+
+        // initialize pending list
+        hftd.strategist.getEnabledStrategies().forEach(function(strategy) {
+            execution.pendingList[strategy] = {};
+        });
         
         async.series([
             execution.updateAccount,
             execution.getInstruments,
-            execution.getQuotes
+            execution.getQuotes,
+            execution.getOpenPositions
         ], function(error) {
             if (error)
                 callback(error);

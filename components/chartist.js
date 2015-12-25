@@ -256,8 +256,6 @@ var chartist = function() {
 
 };
 
-
-
 module.exports = function() {
     return new chartist();
 };
