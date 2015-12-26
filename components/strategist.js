@@ -28,6 +28,8 @@ var strategyManager = function() {
                 });
             }
         }
+
+        return accounts;
     
     };
 
@@ -45,6 +47,8 @@ var strategyManager = function() {
             if (typeof strategy.enabled === 'undefined' || strategy.enabled) 
                 strategies.push(strategyName);
         }
+
+        return strategies;
     
     };
 
@@ -53,11 +57,11 @@ var strategyManager = function() {
      */
     strategyManager.start = function(callback) {
 
-        var config = hftd.config;
-        var numStrategies = _.keys(config.strategies).length;
+        var config        = hftd.config;
+        var numStrategies = strategyManager.getEnabledStrategies().length;
 
         if (typeof config.strategies === 'undefined' || !numStrategies) {
-            hftd.error("No strategies defined.");
+            hftd.error("No enabled strategies found.");
             process.exit(1);
         }
 
@@ -72,9 +76,9 @@ var strategyManager = function() {
             if (typeof strategy.enabled === 'undefined' || strategy.enabled) {
 
                 // instance strategy object, pass config into constructor
-                strategyManager.strategies[strategyName] = new require('../strategies/' + strategyName)(strategy);
+                strategyManager.strategies[strategyName] = new require('../alpha/' + strategy.alpha)(strategy);
                 
-                // if strategy defines an run callback, schedule at the interval specified in config
+                // if strategy defines a run callback, schedule at the interval specified in config
                 if (typeof strategyManager.strategies[strategyName].run == 'function') {
                     if (!strategy.schedule) {
                         hftd.error(sprintf("Strategy '%s' defines a 'run' method, but no schedule defined in config", strategyName));

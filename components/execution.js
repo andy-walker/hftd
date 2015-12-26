@@ -65,21 +65,27 @@ var execution = function() {
      */
     execution.getOpenPositions = function(completedCallback) {
         
-        var account = hftd.strategist.getAccounts();
+        var accounts = hftd.strategist.getAccounts();
 
-        async.forEach(accounts, function(account, taskCallback) { 
+        async.forEach(accounts, function(account, taskCallback) {
+            
             hftd.restAPI.client.getOpenTrades(account.accountId, function(error, trades) {
                 if (error)
                     taskCallback(error);
                 trades.forEach(function(trade) {
+                    trade.strategy = account.strategy;
                     execution.trades[trade.id] = trade;
                 });
                 taskCallback();
-            });     
+            });
+
         }, function(error) {
+            
             if (error)
                 return hftd.error(error);
+            
             completedCallback();
+        
         });
 
     };
@@ -177,13 +183,17 @@ var execution = function() {
         else if (params.side == 'short')
             params.side = 'sell';
 
-        var account = hftd.config.account;
         params.type = 'market';
+
+        var accountId = hftd.config.strategies[strategy].accountId;
+
+        if (!accountId)
+            return hftd.error(sprintf("No account id set for strategy '%s'", strategy));
 
         // push onto pending list, prevents multiple trades being opened in a fast moving market
         execution.pendingList[strategy][params.instrument] = 1;
 
-        hftd.restAPI.client.createOrder(account.accountId, params, function(error, confirmation) {
+        hftd.restAPI.client.createOrder(accountId, params, function(error, confirmation) {
             
             if (error)
                 return hftd.error(error);
