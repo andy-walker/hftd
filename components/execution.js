@@ -31,8 +31,8 @@ var execution = function() {
     /**
      * Getter function for account balance
      */
-    execution.getAccountBalance = function() {
-        return execution.account.balance;
+    execution.getAccountBalance = function(strategy) {
+        return execution.account[strategy].balance;
     };
 
     /**
@@ -261,13 +261,28 @@ var execution = function() {
     /**
      * Update account details from rest api
      */
-    execution.updateAccount = function(callback) {
-        hftd.restAPI.client.getAccount(hftd.config.account.accountId, function(error, account) {
+    execution.updateAccount = function(completedCallback) {
+
+        var accounts = hftd.strategist.getAccounts();
+
+        async.forEach(accounts, function(account, taskCallback) {
+            
+            hftd.restAPI.client.getAccount(account.accountId, function(error, account) {
+                if (error)
+                    return hftd.error(error);
+                execution.account[account.strategy] = account;
+                taskCallback();
+            });
+
+        }, function(error) {
+            
             if (error)
                 return hftd.error(error);
-            execution.account = account;
-            callback();
+            
+            completedCallback();
+        
         });
+
     };
 
 };

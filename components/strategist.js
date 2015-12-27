@@ -75,6 +75,8 @@ var strategyManager = function() {
             
             if (typeof strategy.enabled === 'undefined' || strategy.enabled) {
 
+                strategy.name = strategyName;
+
                 // instance strategy object, pass config into constructor
                 strategyManager.strategies[strategyName] = new require('../alpha/' + strategy.alpha)(strategy);
                 
