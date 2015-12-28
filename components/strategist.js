@@ -99,7 +99,22 @@ var strategyManager = function() {
         
         }
 
-        callback();
+        // initialize stats.csv file if it doesn't exist
+        var statsFile = __dirname + '/../data/stats.csv';
+        fs.exists(statsFile, function(exists) {
+            if (!exists) {
+                hftd.log('No stats file found. Creating new file ...');
+                var headers = strategyManager.getEnabledStrategies();
+                headers.unshift('Date/Time');
+                fs.writeFile(statsFile, headers.join(',') + "\n", function(error) {
+                    if (error)
+                        return hftd.error(error);
+                    hftd.log(sprintf('Stats file created - [ %s ]', color('OK', 'green')));
+                    strategyManager.updateStats();
+                });
+            }
+            callback();
+        });
 
     };
 
@@ -107,6 +122,26 @@ var strategyManager = function() {
         strategyManager.onTickCallbacks.forEach(function(callback) {
             callback(tick);
         });
+    };
+
+    /**
+     * Update stats.csv file with account balances
+     * Called after a trade was closed
+     */
+    strategyManager.updateStats = function() {
+        
+        var strategies = strategyManager.getEnabledStrategies();
+        var rows       = [strftime('%a %Y-%m-%d %H:%M:%S', new Date())];
+
+        strategies.forEach(function(strategyName) {
+            rows.push(hftd.execution.getAccountBalance(strategyName));
+        });
+
+        fs.appendFile(__dirname + '/../data/stats.csv', rows.join(',') + "\n", function(error) {
+            if (error)
+                return hftd.error(error);
+        });
+
     };
 
 };

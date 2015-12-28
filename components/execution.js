@@ -24,6 +24,7 @@ var execution = function() {
                 return hftd.error(error);
             delete execution.trades[tradeId];
             hftd.log(sprintf('Position closed - [ %s ]', color('OK', 'green')));
+            hftd.strategist.updateStats();
         });
   
     };
@@ -152,18 +153,40 @@ var execution = function() {
     };
 
     execution.onEvent = function(event) {
+        
         hftd.log('Received event:');
         console.log(event);
-        switch (event.transaction.type) {
+
+        var transaction = event.transaction;
+
+        switch (transaction.type) {
+            
             case 'STOP_LOSS_FILLED':
-                hftd.log(sprintf('Closed trade %s on %s (hit stop loss)', event.transaction.tradeId, event.transaction.instrument));
-                delete execution.trades[event.transaction.tradeId];
+                
+                hftd.log(sprintf('Closed trade %s on %s (hit stop loss)', transaction.tradeId, transaction.instrument));
+                
+                var strategy = execution.trades[transaction.tradeId].strategy;
+                delete execution.trades[transaction.tradeId];
+                
+                execution.account[strategy].balance = transaction.accountBalance;
+                hftd.strategist.updateStats();
+
                 break;
+
             case 'TAKE_PROFIT_FILLED':
-                hftd.log(sprintf('Closed trade %s on %s (hit take profit)', event.transaction.tradeId, event.transaction.instrument));
+                
+                hftd.log(sprintf('Closed trade %s on %s (hit take profit)', transaction.tradeId, transaction.instrument));
+                
+                var strategy = execution.trades[transaction.tradeId].strategy;
                 delete execution.trades[event.transaction.tradeId];
+               
+                execution.account[strategy].balance = transaction.accountBalance;
+                hftd.strategist.updateStats();               
+
                 break;               
+        
         }
+    
     };
 
     /**
@@ -265,12 +288,12 @@ var execution = function() {
 
         var accounts = hftd.strategist.getAccounts();
 
-        async.forEach(accounts, function(account, taskCallback) {
+        async.forEach(accounts, function(subAccount, taskCallback) {
             
-            hftd.restAPI.client.getAccount(account.accountId, function(error, account) {
+            hftd.restAPI.client.getAccount(subAccount.accountId, function(error, account) {
                 if (error)
                     return hftd.error(error);
-                execution.account[account.strategy] = account;
+                execution.account[subAccount.strategy] = account;
                 taskCallback();
             });
 

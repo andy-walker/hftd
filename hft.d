@@ -9,6 +9,8 @@ require('./components/lib');
 require('./components/functions');
 require('./components/console');
 
+hftd.initialized = false;
+
 hftd.restAPI     = new require('./components/rest-api')();
 hftd.streamAPI   = new require('./components/stream-api')();
 
@@ -35,6 +37,7 @@ async.series([
 ],  function(error) {
         if (error)
             hftd.log(error, 'error');
+        hftd.initialized = true;
     }
     
 );

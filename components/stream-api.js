@@ -26,8 +26,8 @@ streamAPI.prototype.start = function(callback) {
     // initialize rate stream A
     streamAPI.rateStream.A = new streamAPI.createRateStream(splitInstruments[0], streamAPI.onTickUpdate);
     
-    // if more than two instruments defined, initialize a second connection - workload
-    // will be shared equally between the two connections
+    // if more than two instruments defined, initialize a second connection since Oanda allow 
+    // that - workload will then be shared equally between the two connections
     if (splitInstruments[1].length)
         streamAPI.rateStream.B = new streamAPI.createRateStream(splitInstruments[1], streamAPI.onTickUpdate);
     
@@ -74,9 +74,12 @@ streamAPI.prototype.onTickUpdate = function(tick) {
         //hftd.log('Heartbeat');
     } else if (tick.tick !== undefined) {
         //hftd.log(sprintf('%s: %s <=> %s', tick.tick.instrument, tick.tick.bid, tick.tick.ask));
-        hftd.chartist.onTick(tick.tick);
-        hftd.strategist.onTick(tick.tick);
-        //var tickTimestamp = getTimestamp(tick.tick.time);
+        
+        if (hftd.initialized) {
+            hftd.chartist.onTick(tick.tick);
+            hftd.strategist.onTick(tick.tick);
+        }
+
     }
 
 };
