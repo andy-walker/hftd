@@ -12,6 +12,24 @@ var strategyManager = function() {
     strategyManager.onTickCallbacks = [];
 
     /**
+     * Archive trade to filesystem for analysis later - called when a trade is closed
+     */
+    strategyManager.archiveTrade = function(transaction, trade) {
+        
+        var filename = sprintf('%s/../data/trades/%s/%s.json', __dirname, trade.strategy, transaction.tradeId);  
+        
+        // combine transaction and trade into a single object - avoid mutating trade object
+        // by merging into an empty object
+        var data = _({}).extend(transaction, trade);
+
+        fs.writeFile(filename, JSON.stringify(data), function(error) {
+            if (error)
+                hftd.error(error);
+        });
+
+    };
+
+    /**
      * Get an array mapping strategies to accounts for all enabled strategies
      */
     strategyManager.getAccounts = function() {
@@ -93,6 +111,23 @@ var strategyManager = function() {
                 if (typeof strategyManager.strategies[strategyName].onTick == 'function')
                     strategyManager.onTickCallbacks.push(strategyManager.strategies[strategyName].onTick);
             
+                // create a directory to archive trades for the strategy into if none exists - 
+                // this can complete at some point in the future, as it won't be used until a trade is closed
+                
+                (function(name) {
+
+                    var dirName = __dirname + '/../data/trades/' + name;
+                    fs.exists(dirName, function(exists) {
+                        if (!exists) {
+                            fs.mkdir(dirName, function(error, fd) {
+                                if (error)
+                                    hftd.error(error);
+                            });
+                        }
+                    });
+
+                })(strategyName);
+
                 hftd.log(sprintf("Initialized strategy: '%s' - [ %s ]", strategyName, color('OK', 'green')));
 
             }    

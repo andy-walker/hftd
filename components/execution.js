@@ -20,11 +20,17 @@ var execution = function() {
         hftd.log(sprintf('Closing trade %s ...', tradeId));
 
         hftd.restAPI.client.closeTrade(tradeId, function(error, confirmation) {
+            
             if (error)
                 return hftd.error(error);
+            
+            hftd.strategist.archiveTrade({tradeId: tradeId}, execution.trades[tradeId]);
+            
             delete execution.trades[tradeId];
+            
             hftd.log(sprintf('Position closed - [ %s ]', color('OK', 'green')));
             hftd.strategist.updateStats();
+        
         });
   
     };
@@ -165,7 +171,10 @@ var execution = function() {
                 
                 hftd.log(sprintf('Closed trade %s on %s (hit stop loss)', transaction.tradeId, transaction.instrument));
                 
-                var strategy = execution.trades[transaction.tradeId].strategy;
+                var trade    = execution.trades[transaction.tradeId];
+                var strategy = trade.strategy;
+
+                hftd.strategist.archiveTrade(transaction, trade);
                 delete execution.trades[transaction.tradeId];
                 
                 execution.account[strategy].balance = transaction.accountBalance;
@@ -177,8 +186,11 @@ var execution = function() {
                 
                 hftd.log(sprintf('Closed trade %s on %s (hit take profit)', transaction.tradeId, transaction.instrument));
                 
-                var strategy = execution.trades[transaction.tradeId].strategy;
-                delete execution.trades[event.transaction.tradeId];
+                var trade    = execution.trades[transaction.tradeId];
+                var strategy = trade.strategy;
+
+                hftd.strategist.archiveTrade(transaction, trade);
+                delete execution.trades[transaction.tradeId];
                
                 execution.account[strategy].balance = transaction.accountBalance;
                 hftd.strategist.updateStats();               
@@ -192,7 +204,7 @@ var execution = function() {
     /**
      * Open trade via rest api, create local data entry if successful
      */
-    execution.openPosition = function(strategy, params) {
+    execution.openPosition = function(strategy, params, data) {
         
         hftd.log(sprintf('%s: opening %s position on %s ...', strategy, params.side, params.instrument));
 
@@ -225,8 +237,17 @@ var execution = function() {
             delete execution.pendingList[strategy][params.instrument];
 
             if (typeof confirmation.tradeOpened !== 'undefined') {
+
+                // copy any metadata we want to store
+                for (key in data)
+                    params[key] = data[key];
+
+                // record which strategy opened the trade
                 params.strategy = strategy;
+                params.tid      = confirmation.tradeOpened.id;
+
                 execution.trades[confirmation.tradeOpened.id] = params;
+
             } else {
                 hftd.error('Unable to open trade on ' + params.instrument);
                 console.log(confirmation);
