@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Quick and dirty php script for visualizing p/l csv files using highcharts
+ */
+
 $file = [];
 
 if (isset($_GET['csv'])) {
@@ -15,6 +19,8 @@ $headers = array_shift($file);
 array_shift($headers);
 $algos = $headers;
 $data = [];
+$min = null;
+$max = null;
 
 foreach ($file as $line) {
     $date = array_shift($line);
@@ -23,6 +29,10 @@ foreach ($file as $line) {
             'date' => date('Y, m, d, H, i, s', strtotime($date)),
             'balance' => $line[$key]
         ];
+        if (!isset($min) or $line[$key] < $min)
+            $min = $line[$key];
+        elseif (!isset($max) or $line[$key] > $max)
+            $max = $line[$key]; 
     }
 }
 //echo "<pre>" . print_r($data, true) . "</pre>"; exit;
@@ -61,8 +71,8 @@ foreach ($file as $line) {
             title: {
                 text: 'Account balance'
             },
-            min: 996,
-            max: 1001
+            min: <?php print $min; ?>,
+            max: <?php print $max; ?>
         },
         tooltip: {
             headerFormat: '<b>{series.name}</b><br>',
@@ -81,12 +91,9 @@ foreach ($file as $line) {
         <?php foreach ($data as $algo => $points): ?>
         {
             name: '<?php print $algo; ?>',
-            // Define the data points. All series have a dummy year
-            // of 1970/71 in order to be compared on the same x axis. Note
-            // that in JavaScript, months start at 0 for January, 1 for February etc.
             data: [
               <?php foreach ($points as $key => $point): ?>
-                [Date.UTC(<?php print $point['date']; ?>), <?php print $point['balance']; ?>]<?php if ($key < count($points) - 1) print ',' . PHP_EOL; ?>
+                [Date.UTC(<?php print $point['date']; ?>), <?php print $point['balance']; ?>],
               <?php endforeach; ?>
             ]
         }<?php if ($key != end(array_keys($data))) print ',' . PHP_EOL; ?>
