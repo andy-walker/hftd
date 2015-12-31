@@ -21,25 +21,30 @@ hftd.execution   = new require('./components/execution')();
 hftd.servicePort = new require('./components/service-port')(); 
 hftd.strategist  = new require('./components/strategist')();
 
-/**
- * Initialize / start components
- */
-async.series([
+// construct a list of initialization tasks
+var initTasks = [
     
     // initialize api connections
     hftd.restAPI.start,
     hftd.streamAPI.start,
 
     // initialize internal components
-    hftd.execution.start,
-    hftd.strategist.start
+    hftd.execution.start
 
-],  function(error) {
-        if (error)
-            hftd.log(error, 'error');
-        hftd.initialized = true;
-    }
-    
-);
+];
 
+// if mirroring enabled, load component / add initialization task
+if (typeof hftd.config.mirrorEnabled !== 'undefined' && hftd.config.mirrorEnabled) {
+    hftd.mirror = new require('./components/mirror')();
+    initTasks.push(hftd.mirror.start);
+}
 
+// start strategist component last
+initTasks.push(hftd.strategist.start);
+
+// run init tasks list using async.series
+async.series(initTasks, function(error) {
+    if (error)
+        hftd.log(error, 'error');
+    hftd.initialized = true;
+});

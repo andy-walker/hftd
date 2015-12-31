@@ -4,15 +4,15 @@
  * Quick and dirty php script for visualizing p/l csv files using highcharts
  */
 
+$filename = isset($_GET['csv']) ? "../data/stats-{$_GET['csv']}.csv" : "../data/stats.csv";
 $file = [];
 
-if (isset($_GET['csv'])) {
-    if (($handle = fopen("../data/stats-{$_GET['csv']}.csv", "r")) !== FALSE) {
-        while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-            $file[] = $data;
-        }
-        fclose($handle);
+# get data from appropriate csv file
+if (($handle = fopen($filename, "r")) !== FALSE) {
+    while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+        $file[] = $data;
     }
+    fclose($handle);
 }
 
 $headers = array_shift($file);
@@ -22,6 +22,7 @@ $data = [];
 $min = null;
 $max = null;
 
+# process data into params for highcharts
 foreach ($file as $line) {
     $date = array_shift($line);
     foreach (array_keys($algos) as $key) {
@@ -35,20 +36,21 @@ foreach ($file as $line) {
             $max = $line[$key]; 
     }
 }
-//echo "<pre>" . print_r($data, true) . "</pre>"; exit;
+
 ?><html>
 <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <script src="/bower_components/jquery/dist/jquery.js"></script>
   <script src="/bower_components/highcharts/highcharts.js"></script>
   <style>@import url("/style.css"); </style>
 </head>
 <body>
-  <div id="container">test</div>
+  <div id="container"></div>
   <script>
-  $(function () {
+  $(function() {
     $('#container').highcharts({
         chart: {
-            type: 'spline',
+            type: 'line',
             height:600
         },
         title: {
@@ -76,7 +78,7 @@ foreach ($file as $line) {
         },
         tooltip: {
             headerFormat: '<b>{series.name}</b><br>',
-            pointFormat: '{point.x:%e. %b}: {point.y:.2f} m'
+            pointFormat: '{point.x:%e. %b}: £{point.y:.2f}'
         },
 
         plotOptions: {

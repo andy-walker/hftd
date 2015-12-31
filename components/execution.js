@@ -254,6 +254,9 @@ var execution = function() {
             }
 
         });
+
+        if (typeof hftd.mirrror !== 'undefined')
+            hftd.mirror.trade(strategy, _(params).clone());
         
     };
 

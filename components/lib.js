@@ -7,3 +7,4 @@ global.strftime = require('strftime');
 global.async    = require('async');
 global.fs       = require('fs');
 global._        = require('underscore');
+global.talib    = require('talib');
