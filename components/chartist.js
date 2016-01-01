@@ -26,6 +26,32 @@ var chartist = function() {
     
     });
 
+    chartist.candlesToOHLC = function(candles, onlyComplete = false) {
+        
+        var ohlc = {
+            'open':  [],
+            'high':  [],
+            'low':   [],
+            'close': []
+        };
+
+        candles.forEach(function(candle) {
+            
+            // when only_complete is true, only add completed candles
+            // when only_complete is false, add all candles
+            if ((onlyComplete && candle.complete) || onlyComplete == false) {
+                ohlc.open.push(candle.openMid);
+                ohlc.close.push(candle.closeMid);
+                ohlc.high.push(candle.highMid);
+                ohlc.low.push(candle.lowMid);
+            }
+                
+        });
+
+        return ohlc;
+
+    };
+
     /**
      * Convert an amount
      */
