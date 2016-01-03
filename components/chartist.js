@@ -26,8 +26,35 @@ var chartist = function() {
     
     });
 
-    chartist.candlesToOHLC = function(candles, onlyComplete = false) {
+    chartist.candlesToMidpoint = function(candlesIn) {
         
+        var candlesOut = [];
+        
+        candlesIn.forEach(function(candleIn) {
+            
+            var candleOut = {
+                time:     candleIn.time,
+                volume:   candleIn.volume,
+                complete: candleIn.complete
+            };
+
+            candleOut.openMid  = (candleIn.openBid + candleIn.openAsk) / 2;
+            candleOut.highMid  = (candleIn.highBid + candleIn.highAsk) / 2;
+            candleOut.lowMid   = (candleIn.lowBid + candleIn.lowAsk) / 2;
+            candleOut.closeMid = (candleIn.closeBid + candleIn.closeAsk) / 2;
+
+            candlesOut.push(candleOut);
+
+        });
+
+        return candlesOut;
+
+    };
+
+    chartist.candlesToOHLC = function(candles, onlyComplete) {
+        
+        onlyComplete = onlyComplete || false;
+
         var ohlc = {
             'open':  [],
             'high':  [],
@@ -142,7 +169,7 @@ var chartist = function() {
     };
 
     /**
-     * Retrieve a set of candles
+     * Retrieve a set of candles from cache
      */
     chartist.getCandles = function(instrument, interval, numCandles, type) {
         
@@ -189,6 +216,36 @@ var chartist = function() {
             bid: quote.bid,
             ask: quote.ask
         };
+
+    };
+
+    /**
+     * Helper function for alpha models - determine if aSeries has crossed over bSeries
+     */
+    chartist.isCrossover = function(aSeries, bSeries) {
+        
+        var a = aSeries.slice(-2);
+        var b = bSeries.slice(-2);
+
+        if (a[0] < b[0] && a[1] > b[1])
+            return true;
+
+        return false;
+
+    };
+
+    /**
+     * Helper function for alpha models - determine if aSeries has crossed under bSeries
+     */
+    chartist.isCrossunder = function(aSeries, bSeries) {
+        
+        var a = aSeries.slice(-2);
+        var b = bSeries.slice(-2);
+
+        if (a[0] > b[0] && a[1] < b[1])
+            return true;
+
+        return false;
 
     };
 

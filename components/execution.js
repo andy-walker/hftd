@@ -13,9 +13,37 @@ var execution = function() {
     execution.pendingList = {};
 
     /**
+     * Calculate initial stop loss
+     */
+    execution.calculateStopLoss = function(direction, amount, percentage) {
+                  
+        if (direction == 'short' || direction == 'sell')
+            return amount + (amount * (percentage / 100));
+        else if (direction == 'long' || direction == 'buy')
+            return amount - (amount * (percentage / 100));
+        else
+            hftd.error(sprintf("Unsupported direction: '%s' when calculating stop loss", direction));
+
+    };
+
+    /**
+     * Calculate initial take-profit
+     */
+    execution.calculateTakeProfit = function(direction, amount, percentage) {
+        
+        if (direction == 'short' || direction == 'sell')
+            return amount - (amount * (percentage / 100));
+        else if (direction == 'long' || direction == 'buy')
+            return amount + (amount * (percentage / 100));
+        else
+            hftd.error(sprintf("Unsupported direction: '%s' when calculating take-profit", direction));
+
+    };
+
+    /**
      * Close trade via rest api, delete local entry if successful
      */
-    execution.closePosition = function(tradeId) {
+    execution.closeTrade = function(tradeId) {
         
         hftd.log(sprintf('Closing trade %s ...', tradeId));
 
@@ -66,34 +94,19 @@ var execution = function() {
     };
 
     /**
-     * Get a list of open trades from broker and store in local data structures.
-     * This is used during initialization so we can restart / recover from a crash,
-     * and carry on from where we left off.
+     * Get any open positions for the strategy / instrument
      */
-    execution.getOpenPositions = function(completedCallback) {
+    execution.getOpenTrades = function(strategy, instrument) {
         
-        var accounts = hftd.strategist.getAccounts();
+        var openTrades = [];
 
-        async.forEach(accounts, function(account, taskCallback) {
-            
-            hftd.restAPI.client.getOpenTrades(account.accountId, function(error, trades) {
-                if (error)
-                    taskCallback(error);
-                trades.forEach(function(trade) {
-                    trade.strategy = account.strategy;
-                    execution.trades[trade.id] = trade;
-                });
-                taskCallback();
-            });
+        for (var tid in execution.trades) {
+            var trade = execution.trades[tid];
+            if (trade.strategy == strategy && trade.instrument == instrument)
+                openTrades.push(trade);
+        }
 
-        }, function(error) {
-            
-            if (error)
-                return hftd.error(error);
-            
-            completedCallback();
-        
-        });
+        return openTrades;
 
     };
 
@@ -294,7 +307,7 @@ var execution = function() {
             execution.updateAccount,
             execution.getInstruments,
             execution.getQuotes,
-            execution.getOpenPositions
+            execution.updateOpenPositions
         ], function(error) {
             if (error)
                 callback(error);
@@ -318,6 +331,38 @@ var execution = function() {
                 if (error)
                     return hftd.error(error);
                 execution.account[subAccount.strategy] = account;
+                taskCallback();
+            });
+
+        }, function(error) {
+            
+            if (error)
+                return hftd.error(error);
+            
+            completedCallback();
+        
+        });
+
+    };
+
+    /**
+     * Get a list of open trades from broker and store in local data structures.
+     * This is used during initialization so we can restart / recover from a crash,
+     * and carry on from where we left off.
+     */
+    execution.updateOpenPositions = function(completedCallback) {
+        
+        var accounts = hftd.strategist.getAccounts();
+
+        async.forEach(accounts, function(account, taskCallback) {
+            
+            hftd.restAPI.client.getOpenTrades(account.accountId, function(error, trades) {
+                if (error)
+                    taskCallback(error);
+                trades.forEach(function(trade) {
+                    trade.strategy = account.strategy;
+                    execution.trades[trade.id] = trade;
+                });
                 taskCallback();
             });
 
