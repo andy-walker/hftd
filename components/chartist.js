@@ -26,6 +26,9 @@ var chartist = function() {
     
     });
 
+    /**
+     * Convert bid/ask candles to midpoint
+     */
     chartist.candlesToMidpoint = function(candlesIn) {
         
         var candlesOut = [];
@@ -51,6 +54,9 @@ var chartist = function() {
 
     };
 
+    /**
+     * Convert candles to open/high/low/close arrays
+     */
     chartist.candlesToOHLC = function(candles, onlyComplete) {
         
         onlyComplete = onlyComplete || false;
