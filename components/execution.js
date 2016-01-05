@@ -43,9 +43,11 @@ var execution = function() {
     /**
      * Close trade via rest api, delete local entry if successful
      */
-    execution.closeTrade = function(tradeId) {
-        
+    execution.closeTrade = function(strategy, tradeId) {
+
         hftd.log(sprintf('Closing trade %s ...', tradeId));
+        
+        var accountId = hftd.config.strategies[strategy].accountId;
 
         hftd.restAPI.client.closeTrade(tradeId, function(error, confirmation) {
             
