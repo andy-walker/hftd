@@ -165,8 +165,8 @@ var execution = function() {
      */
     execution.isMarketOpen = function(instrument) {
         if (execution.instruments[instrument].halted)
-            return true;
-        return false;
+            return false;
+        return true;
     };
 
     /**
