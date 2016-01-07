@@ -161,6 +161,15 @@ var execution = function() {
     };
 
     /**
+     * Query whether market is open for the requested instrument
+     */
+    execution.isMarketOpen = function(instrument) {
+        if (execution.instruments[instrument].halted)
+            return true;
+        return false;
+    };
+
+    /**
      * Get quotes on all instruments - these will be used as a fallback
      * when we have no tick data for the instrument
      */
