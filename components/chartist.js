@@ -230,8 +230,8 @@ var chartist = function() {
      */
     chartist.isCrossover = function(aSeries, bSeries) {
         
-        var a = aSeries.slice(-2);
-        var b = bSeries.slice(-2);
+        var a = _.isArray(aSeries) ? aSeries.slice(-2) : [aSeries, aSeries];
+        var b = _.isArray(bSeries) ? bSeries.slice(-2) : [bSeries, bSeries];
 
         if (a[0] < b[0] && a[1] > b[1])
             return true;
@@ -245,8 +245,8 @@ var chartist = function() {
      */
     chartist.isCrossunder = function(aSeries, bSeries) {
         
-        var a = aSeries.slice(-2);
-        var b = bSeries.slice(-2);
+        var a = _.isArray(aSeries) ? aSeries.slice(-2) : [aSeries, aSeries];
+        var b = _.isArray(bSeries) ? bSeries.slice(-2) : [bSeries, bSeries];
 
         if (a[0] > b[0] && a[1] < b[1])
             return true;

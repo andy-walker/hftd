@@ -67,7 +67,7 @@ var execution = function() {
             }
 
             if (callback)
-                callback();
+                callback(error, confirmation);
         
         });
   
@@ -297,7 +297,7 @@ var execution = function() {
      */
     execution.refreshData = function() {
 
-        console.log(execution.trades);
+        //console.log(execution.trades);
 
         async.series([
             execution.updateAccount,
