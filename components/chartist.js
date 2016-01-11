@@ -211,7 +211,7 @@ var chartist = function() {
 
         // if we have tick data for the requested instrument, 
         // get quote from last tick
-        if (chartist.tickData[instrument].length) {
+        if (instrument in chartist.tickData && chartist.tickData[instrument].length) {
             quote = _.last(chartist.tickData[instrument]);
         // otherwise, fall back to executionist quotes list
         } else {
@@ -233,7 +233,7 @@ var chartist = function() {
         var a = _.isArray(aSeries) ? aSeries.slice(-2) : [aSeries, aSeries];
         var b = _.isArray(bSeries) ? bSeries.slice(-2) : [bSeries, bSeries];
 
-        if (a[0] < b[0] && a[1] > b[1])
+        if (a[0] < b[0] && a[1] >= b[1])
             return true;
 
         return false;
@@ -248,7 +248,7 @@ var chartist = function() {
         var a = _.isArray(aSeries) ? aSeries.slice(-2) : [aSeries, aSeries];
         var b = _.isArray(bSeries) ? bSeries.slice(-2) : [bSeries, bSeries];
 
-        if (a[0] > b[0] && a[1] < b[1])
+        if (a[0] > b[0] && a[1] <= b[1])
             return true;
 
         return false;

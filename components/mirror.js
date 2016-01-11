@@ -15,8 +15,13 @@ var mirror = function() {
             case 'STOP_LOSS_FILLED':
             case 'TAKE_PROFIT_FILLED':
                 
-                var type = (transaction.type == 'STOP_LOSS_FILLED' ? 'stop loss' : 'take profit');
-                hftd.log(sprintf('Closed trade %s on %s (%s filled)', transaction.tradeId, transaction.instrument, type));
+                var reason = {
+                    'STOP_LOSS_FILLED':   'hit stop loss',
+                    'TAKE_PROFIT_FILLED': 'hit take profit',
+                    'TRADE_CLOSED':       'trade closed'
+                }[transaction.type];
+
+                hftd.log(sprintf('Closed trade %s on %s (%s)', transaction.tradeId, transaction.instrument, reason));
 
                 mirror.balances[transaction.accountId] = transaction.accountBalance; 
                 delete mirror.trades[transaction.tradeId];
@@ -49,7 +54,14 @@ var mirror = function() {
     
     };
 
-    mirror.trade = function(strategy, params) {
+    mirror.trade = function(params) {
+
+        var accounts = mirror.getAccounts(params.strategy);
+
+        if (!accounts)
+            return;
+
+        
 
     };
 

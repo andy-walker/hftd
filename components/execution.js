@@ -40,6 +40,26 @@ var execution = function() {
 
     };
 
+    execution.checkTrades = function(callback) {
+        
+        var error = false;
+
+        for (tradeId in execution.trades) {
+            if (tradeId == 'undefined') {
+                error = true;
+                delete execution.trades[undefined];
+            }
+        }
+
+        if (error) {
+            hftd.warning('Data integrity check failed, refreshing trades ...');
+            execution.updateOpenPositions(callback);
+        } else {
+            callback();
+        }
+
+    };
+
     /**
      * Close trade via rest api, delete local entry if successful
      */
@@ -54,15 +74,23 @@ var execution = function() {
             if (error) {
                 
                 hftd.error(error);
-            
+                
+                if (error == 'Trade not found') {
+                    hftd.log('Removing local entry');
+                    delete execution.trades[tradeId];
+                }
+
             } else {
             
-                hftd.strategist.archiveTrade({tradeId: tradeId}, execution.trades[tradeId]);
-                
-                delete execution.trades[tradeId];
-                
+                if (tradeId in execution.trades) {
+
+                    hftd.strategist.archiveTrade({tradeId: tradeId}, execution.trades[tradeId]);
+                    delete execution.trades[tradeId];
+                    hftd.strategist.updateStats();
+
+                }
+
                 hftd.log(sprintf('Position closed - [ %s ]', color('OK', 'green')));
-                hftd.strategist.updateStats();
 
             }
 
@@ -183,7 +211,7 @@ var execution = function() {
             prices.forEach(function(quote) {
                 execution.quotes[quote.instrument] = quote;
             });
-
+            //console.log(execution.quotes);
             callback();
         
         });
@@ -200,34 +228,31 @@ var execution = function() {
         switch (transaction.type) {
             
             case 'STOP_LOSS_FILLED':
+            case 'TAKE_PROFIT_FILLED':
+            case 'TRADE_CLOSE':
                 
-                hftd.log(sprintf('Closed trade %s on %s (hit stop loss)', transaction.tradeId, transaction.instrument));
-                
-                var trade    = execution.trades[transaction.tradeId];
-                var strategy = trade.strategy;
+                var reason = {
+                    'STOP_LOSS_FILLED':   'hit stop loss',
+                    'TAKE_PROFIT_FILLED': 'hit take profit',
+                    'TRADE_CLOSE':        'trade closed'
+                }[transaction.type];
 
-                hftd.strategist.archiveTrade(transaction, trade);
-                delete execution.trades[transaction.tradeId];
+                hftd.log(sprintf('Closed trade %s on %s (%s)', transaction.tradeId, transaction.instrument, reason));
                 
-                execution.account[strategy].balance = transaction.accountBalance;
-                hftd.strategist.updateStats();
+                if (transaction.tradeId in execution.trades) {
+
+                    var trade    = execution.trades[transaction.tradeId];
+                    var strategy = trade.strategy;
+
+                    hftd.strategist.archiveTrade(transaction, trade);
+                    delete execution.trades[transaction.tradeId];
+                    
+                    execution.account[strategy].balance = transaction.accountBalance;
+                    hftd.strategist.updateStats();
+
+                }
 
                 break;
-
-            case 'TAKE_PROFIT_FILLED':
-                
-                hftd.log(sprintf('Closed trade %s on %s (hit take profit)', transaction.tradeId, transaction.instrument));
-                
-                var trade    = execution.trades[transaction.tradeId];
-                var strategy = trade.strategy;
-
-                hftd.strategist.archiveTrade(transaction, trade);
-                delete execution.trades[transaction.tradeId];
-               
-                execution.account[strategy].balance = transaction.accountBalance;
-                hftd.strategist.updateStats();               
-
-                break;               
         
         }
     
@@ -257,18 +282,28 @@ var execution = function() {
         if (!accountId)
             return hftd.error(sprintf("No account id set for strategy '%s'", strategy));
 
+        if (typeof execution.pendingList[strategy][params.instrument] !== 'undefined')
+            return hftd.error('Skipping as on pending list');
+
         // push onto pending list, prevents multiple trades being opened in a fast moving market
         execution.pendingList[strategy][params.instrument] = 1;
 
         hftd.restAPI.client.createOrder(accountId, params, function(error, confirmation) {
             
-            if (error)
+            if (error) {
+                delete execution.pendingList[strategy][params.instrument];
                 return hftd.error(error);
+            }
+
+            hftd.log(sprintf('Received trade confirmation for %s on %s', strategy, params.instrument));
+            console.log(confirmation);
+            if (typeof confirmation.tradeOpened.id === 'undefined')
+                hftd.warning('No trade id present in confirmation.');
 
             // remove from pending list
             delete execution.pendingList[strategy][params.instrument];
 
-            if (typeof confirmation.tradeOpened !== 'undefined') {
+            if (typeof confirmation.tradeOpened.id !== 'undefined') {
 
                 // copy any metadata we want to store
                 for (key in data)
@@ -277,8 +312,13 @@ var execution = function() {
                 // record which strategy opened the trade
                 params.strategy = strategy;
                 params.tid      = confirmation.tradeOpened.id;
+                params.id       = confirmation.tradeOpened.id;
 
                 execution.trades[confirmation.tradeOpened.id] = params;
+
+                // perform trade mirroring if component enabled
+                if (typeof hftd.mirror !== 'undefined')
+                    hftd.mirror.trade(params);
 
             } else {
                 hftd.error('Unable to open trade on ' + params.instrument);
@@ -286,9 +326,6 @@ var execution = function() {
             }
 
         });
-
-        if (typeof hftd.mirrror !== 'undefined')
-            hftd.mirror.trade(strategy, _(params).clone());
         
     };
 
@@ -297,12 +334,13 @@ var execution = function() {
      */
     execution.refreshData = function() {
 
-        //console.log(execution.trades);
+        console.log(execution.trades);
 
         async.series([
             execution.updateAccount,
             execution.getInstruments,
-            execution.getQuotes
+            execution.getQuotes,
+            execution.checkTrades
         ], function(error) {
             if (error)
                 hftd.error(error);
