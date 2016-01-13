@@ -92,6 +92,9 @@ var execution = function() {
 
                 hftd.log(sprintf('Position closed - [ %s ]', color('OK', 'green')));
 
+                if ('mirror' in hftd)
+                    hftd.mirror.closeTrades(tradeId);
+
             }
 
             if (callback)
@@ -119,7 +122,7 @@ var execution = function() {
         client.getInstruments(account.accountId, function(error, instruments) {
             
             if (error)
-                callback(error);
+                return callback(error);
 
             instruments.forEach(function(instrument) {
                 execution.instruments[instrument.instrument] = instrument;
@@ -206,7 +209,7 @@ var execution = function() {
         hftd.restAPI.client.getPrice(_.keys(execution.instruments), function(error, prices) {
             
             if (error)
-                callback(error);
+                return callback(error);
             
             prices.forEach(function(quote) {
                 execution.quotes[quote.instrument] = quote;
@@ -317,8 +320,8 @@ var execution = function() {
                 execution.trades[confirmation.tradeOpened.id] = params;
 
                 // perform trade mirroring if component enabled
-                if (typeof hftd.mirror !== 'undefined')
-                    hftd.mirror.trade(params);
+                if ('mirror' in hftd)
+                    hftd.mirror.openTrades(params);
 
             } else {
                 hftd.error('Unable to open trade on ' + params.instrument);
@@ -415,7 +418,7 @@ var execution = function() {
             
             hftd.restAPI.client.getOpenTrades(account.accountId, function(error, trades) {
                 if (error)
-                    taskCallback(error);
+                    return taskCallback(error);
                 trades.forEach(function(trade) {
                     trade.strategy = account.strategy;
                     execution.trades[trade.id] = trade;
