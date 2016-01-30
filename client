@@ -1,0 +1,37 @@
+#!/usr/local/bin/node
+
+global.hftd = {};
+
+global.sprintf  = require("sprintf-js").sprintf;
+global.vsprintf = require("sprintf-js").vsprintf;
+global.strftime = require('strftime');
+
+require('./components/functions');
+require('./components/console');
+
+hftd.config = new require(__dirname + '/config/config.json');
+
+if ('servicePort' in hftd.config) {
+
+    var servicePort = {
+        config: hftd.config.servicePort
+    };
+    
+    if (servicePort.config.enabled) {
+
+        var rpc    = require('node-json-rpc');
+        hftd.client = new rpc.Client(servicePort.config.options);
+        
+        hftd.client.call(
+          {"jsonrpc": "2.0", "method": "accountInfo", "params": {account: "andyw1"}},
+          function (err, res) {
+            // Did it all work ? 
+            if (err) { console.log(err); }
+            else { console.log(res); }
+          }
+        );
+
+
+    } else hftd.error('Service port is not configured / enabled.');
+
+} else hftd.error('Service port is not configured / enabled.');
