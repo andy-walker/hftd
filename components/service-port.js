@@ -13,26 +13,38 @@ var servicePort = function() {
      */
     servicePort.commandInfo = {
         
-        accountInfo: {
+        account: {
             description: "Get account information for the specified account",
             usage:       "account-info <account name>"
         }
 
     };
 
-    servicePort.accountInfo = function(params, callback) {
+    servicePort.account = function(params, callback) {
 
-        hftd.log('Retrieving account info for ' + params.account, 'command');
+        var account = params[0];
+
+        hftd.log('Retrieving account info for ' + account, 'command');
         
-        if ('mirror' in hftd && params.account in hftd.mirror.accounts) 
+        if ('mirror' in hftd && account in hftd.mirror.accounts) 
             return callback(null, {
-                message:   sprintf("Account information for '%s'", 
-                data:      hftd.mirror.accounts[params.account]),
+                message:   sprintf("Account information for '%s':", account),
+                data:      hftd.mirror.accounts[account],
                 formatter: "labelValue"
             }); 
         
+        var error = sprintf("Unable to find account for '%s'", account);
 
+        hftd.error(error);
+        callback({ message: error });
             
+    };
+
+    /**
+     * Used by client to test connection
+     */
+    servicePort.ping = function(params, callback) {
+        callback(null, { message: 'pong'});
     };
 
     /**
@@ -50,6 +62,9 @@ var servicePort = function() {
 
                 var rpc    = require('node-json-rpc');
                 var server = new rpc.Server(servicePort.config.options);
+
+                // add system commands
+                server.addMethod('ping', servicePort.ping);
 
                 // add method for each of the commands in commandInfo
                 for (command in servicePort.commandInfo)

@@ -1,3 +1,10 @@
+String.prototype.lpad = function(padString, length) {
+    var str = this;
+    while (str.length < length)
+        str = padString + str;
+    return str;
+}
+
 /**
  * Console colour function
  */
@@ -39,4 +46,54 @@ global.color = function(message, color, bgColor) {
 
     return message;
 
-}
+};
+
+global.labelValue = function(labelValues) {
+
+    // get longest key
+    var longestKey = 0;
+
+    for (var key in labelValues)
+        if (key.length > longestKey)
+            longestKey = key.length;
+
+    var output = [];
+
+    for (var key in labelValues)
+        output.push(sprintf('%s: %s', key.lpad(' ', longestKey), labelValues[key]));
+
+    return output.join("\n");
+
+};
+
+hftd.log = function(message, level) {
+    
+    level = level || 'message';
+
+    var prefix = {
+        'message': '',
+        'warning': color('Warning', 'yellow') + ': ',
+        'error':   color('Error', 'red') + ': ',
+        'command': color('Service port', 'blue') + ': '
+    }[level];
+
+    console.log(sprintf("[%s] %s%s", 
+        strftime('%a %Y-%m-%d %H:%M:%S', new Date()),
+        prefix,
+        message
+    ));
+
+};
+
+hftd.error = function(message) {
+    hftd.log(message, 'error');
+};
+
+hftd.fatal = function(message) {
+    hftd.error(message);
+    process.exit(1);
+};
+
+hftd.warning = function(message) {
+    hftd.log(message, 'warning');
+};

@@ -51,6 +51,6 @@ initTasks.push(hftd.strategist.start);
 // run initialzation tasks in series
 async.series(initTasks, function(error) {
     if (error)
-        hftd.log(error, 'error');
+        return hftd.error(sprintf("Failed to initialize - %s", error));
     hftd.initialized = true;
 });

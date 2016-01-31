@@ -21,17 +21,64 @@ if ('servicePort' in hftd.config) {
 
         var rpc    = require('node-json-rpc');
         hftd.client = new rpc.Client(servicePort.config.options);
+
+        process.stdout.write("\nhftd> ");
+        var stdin = process.openStdin();
+
+        stdin.on('data', function(command) { 
+
+            var args   = command.toString().trim().split(" ");
+            var method = args.shift();
+
+            if (method == 'exit' || method == 'quit') {
+                console.log('Bye!');
+                process.exit(0);
+            }
+
+            hftd.client.call({
+                
+                jsonrpc: "2.0", 
+                method:  method, 
+                params:  args
+
+            }, function (error, response) {
+
+                //console.log(response);
+
+                if (error) {
+                    console.log(sprintf('%s: %s', color('Error', 'red'), error.message));
+                    return process.stdout.write("\nhftd> ");
+                }
+                
+                if ('error' in response) {
+                    
+                    if (!('message' in response.error))
+                        response.error.message = "An unknown error occurred";
+                    
+                    console.log(sprintf('%s: %s', color('Error', 'red'), response.error.message));
+                
+                } else if ('result' in response) {
+
+                    var result = response.result;
+
+                    if ('message' in result)
+                        process.stdout.write("\n" + result.message + "\n\n");
+
+                    if ('data' in result && result.formatter in global) 
+                        console.log(global[result.formatter](result.data));
+                    else 
+                        console.log(result.data);
+
+                } else {
+                    console.log(sprintf('%s: %s', color('Error', 'red'), "Empty result"));
+                }
+
+                process.stdout.write("\nhftd> ");
+
+            });
+
+        });
         
-        hftd.client.call(
-          {"jsonrpc": "2.0", "method": "accountInfo", "params": {account: "andyw1"}},
-          function (err, res) {
-            // Did it all work ? 
-            if (err) { console.log(err); }
-            else { console.log(res); }
-          }
-        );
-
-
     } else hftd.error('Service port is not configured / enabled.');
 
 } else hftd.error('Service port is not configured / enabled.');
