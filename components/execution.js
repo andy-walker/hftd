@@ -179,7 +179,7 @@ var execution = function() {
         var pip = execution.instruments[instrument].pip;
 
         // no subpips on the following
-        if (_.contains(['HK33_HKD', 'UK100_GBP'], instrument))
+        if (_.contains(['HK33_HKD', 'UK100_GBP', 'DE30_EUR'], instrument))
             return pip.split('.')[1].length;
 
         // no decimal point, precision = 1
@@ -271,8 +271,8 @@ var execution = function() {
         console.log(params);
 
         if (params.units < 1)
-            return hftd.error(sprintf('Minimum trade size must be 1 unit (supplied: %d)', params.units));
-        
+            params.units = 1;
+
         if (params.side == 'long')
             params.side = 'buy';
         else if (params.side == 'short')
@@ -337,7 +337,8 @@ var execution = function() {
      */
     execution.refreshData = function() {
 
-        console.log(execution.trades);
+        //console.log(execution.trades);
+        hftd.log("Refreshing local data ...");
 
         async.series([
             execution.updateAccount,
@@ -346,7 +347,10 @@ var execution = function() {
             execution.checkTrades
         ], function(error) {
             if (error)
-                hftd.error(error);
+                return hftd.error(error);
+            var numAccounts = Object.keys(execution.account).length;
+            var numTrades   = Object.keys(execution.trades).length;
+            hftd.log(sprintf("Refresh complete: (%d open trades on %d accounts) - [ %s ]", numTrades, numAccounts, color('OK', 'green')));
         });
     
     };
@@ -369,9 +373,12 @@ var execution = function() {
             execution.getQuotes,
             execution.updateOpenPositions
         ], function(error) {
-            if (error)
+            if (error) {
+                hftd.error(error);
                 callback(error);
+            }
             // if all went ok, schedule refresh every 60 seconds
+            console.log('Adding refresher job');
             hftd.scheduler.addJob("0 * * * * *", execution.refreshData);
             callback();
         });
@@ -388,20 +395,15 @@ var execution = function() {
         async.forEach(accounts, function(subAccount, taskCallback) {
             
             hftd.restAPI.client.getAccount(subAccount.accountId, function(error, account) {
-                if (error)
-                    return hftd.error(error);
+                if (error) {
+                    hftd.error(error);
+                    return taskCallback(error);
+                }
                 execution.account[subAccount.strategy] = account;
                 taskCallback();
             });
 
-        }, function(error) {
-            
-            if (error)
-                return hftd.error(error);
-            
-            completedCallback();
-        
-        });
+        }, completedCallback);
 
     };
 
@@ -428,8 +430,10 @@ var execution = function() {
 
         }, function(error) {
             
-            if (error)
-                return hftd.error(error);
+            if (error) {
+                hftd.error(error);
+                return completedCallback(error);
+            }
             
             completedCallback();
         
