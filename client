@@ -27,7 +27,7 @@ if ('servicePort' in hftd.config) {
 
         stdin.on('data', function(command) { 
 
-            var args   = command.toString().trim().split(" ");
+            var args   = command.toString().trim().replace(/ on /g, ' ').split(" ");
             var method = args.shift();
 
             if (method == 'exit' || method == 'quit') {
@@ -64,10 +64,12 @@ if ('servicePort' in hftd.config) {
                     if ('message' in result)
                         process.stdout.write("\n" + result.message + "\n\n");
 
-                    if ('data' in result && result.formatter in global) 
-                        console.log(global[result.formatter](result.data));
-                    else 
-                        console.log(result.data);
+                    if ('data' in result) { 
+                        if ('formatter' in result && result.formatter in global) 
+                            console.log(global[result.formatter](result.data));
+                        else 
+                            console.log(result.data);
+                    }
 
                 } else {
                     console.log(sprintf('%s: %s', color('Error', 'red'), "Empty result"));
