@@ -130,6 +130,7 @@ var chartist = function() {
             if (fromCurrency == 'GBP') {
                 return chartist.convert(chartist.convert(amount, 'GBP', 'USD'), 'USD', toCurrency);
             } else if (toCurrency == 'GBP') {
+                //console.log('from = ' + fromCurrency);
                 return chartist.convert(chartist.convert(amount, fromCurrency, 'USD'), 'USD', 'GBP');
             }
 
@@ -254,6 +255,33 @@ var chartist = function() {
         return false;
 
     };
+
+    chartist.ohlcToHeikenAshi = function(ohlc) {
+
+        var ha = {
+            
+            'open':  [],
+            'high':  [],
+            'low':   [],
+            'close': []
+
+        };
+
+        ha.close.push(ohlc.open[0] + ohlc.high[0] + ohlc.low[0] + ohlc.close[0]) / 4;
+        ha.open.push((ha['close'][0] + ohlc.open[0]) / 2);
+        ha.high.push(Math.max(ohlc.high[0], ha.close[0], ha.open[0]));
+        ha.low.push(Math.min(ohlc.low[0], ha.close[0], ha.open[0]));
+
+        for (var i=1; i<ohlc.open.length; i++) {
+            ha.close[i] = (ohlc.open[i] + ohlc.high[i] + ohlc.low[i] + ohlc.close[i]) / 4;
+            ha.open[i]  = (ha.close[i-1] + ha.open[i-1]) / 2;
+            ha.high[i]  = Math.max(ohlc.high[i], ha.close[i], ha.open[i]);
+            ha.low[i]   = Math.min(ohlc.low[i], ha.close[i], ha.open[i]);
+        }
+
+        return ha;
+
+    }
 
     /**
      * When new tick received, update internal cache

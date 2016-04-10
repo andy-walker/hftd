@@ -63,6 +63,10 @@ streamAPI.prototype.getInstrumentList = function() {
 
     }
 
+    // check if there are any additional instruments to monitor (eg: for conversion operations)
+    if ('additionalInstruments' in config)
+        instruments = instruments.concat(config.additionalInstruments);
+
     return instruments;
 
 };
@@ -80,6 +84,8 @@ streamAPI.prototype.onTickUpdate = function(tick) {
         if (hftd.initialized) {
             hftd.chartist.onTick(tick.tick);
             hftd.strategist.onTick(tick.tick);
+            if ('webserver' in hftd)
+                hftd.webserver.subscriptions.tradesUpdate(tick.tick);
         }
 
     }

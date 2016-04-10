@@ -1,0 +1,32 @@
+{
+  "name": "webclient",
+  "homepage": "https://github.com/andy-walker/hftd",
+  "authors": [
+    "andy-walker <andyw+github2@circle-interactive.co.uk>"
+  ],
+  "description": "hftd web client",
+  "main": "index.html",
+  "moduleType": [
+    "amd"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "~3.3.6",
+    "angular": "angularjs#~1.5.0",
+    "angular-route": "~1.5.0",
+    "underscore": "~1.8.3",
+    "angular-ui-bootstrap": "~1.1.2",
+    "highcharts-ng": "~0.0.11",
+    "the-graph": "~0.4.0",
+    "socket.io": "~1.4.5",
+    "angular-socket-io": "~0.7.0"
+  }
+}

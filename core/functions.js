@@ -7,37 +7,6 @@ if (typeof String.prototype.endsWith !== 'function') {
     };
 }
 
-hftd.log = function(message, level) {
-    
-    level = level || 'message';
-
-    var prefix = {
-        'message': '',
-        'warning': color('Warning', 'yellow') + ': ',
-        'error':   color('Error', 'red') + ': '
-    }[level];
-
-    console.log(sprintf("[%s] %s%s", 
-        strftime('%a %Y-%m-%d %H:%M:%S', new Date()),
-        prefix,
-        message
-    ));
-
-};
-
-hftd.error = function(message) {
-    hftd.log(message, 'error');
-};
-
-hftd.fatal = function(message) {
-    hftd.error(message);
-    process.exit(1);
-};
-
-hftd.warning = function(message) {
-    hftd.log(message, 'warning');
-};
-
 /**
  * Sum numbers in an array - equivalent to php's array_sum function
  */

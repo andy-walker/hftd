@@ -1,0 +1,54 @@
+{{{{angular}}}}
+
+<div ng-app="webclient" ng-controller="TradeMonitorCtrl">
+  <table class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th class="text-center">Strategy</th>
+        <th class="text-center">Position</th>
+        <th>Instrument</th>
+        <th class="text-center">Units</th>
+        <th>S/L</th>
+        <th>T/P</th>
+        <th>T/S</th>
+        <th class="text-center">Price</th>
+        <th class="text-center">Current</th>
+        <th class="text-center">Profit (GBP)</th>
+        <th class="text-center">Profit (%)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr ng-repeat="trade in trades">
+        <td>{{trade.id}}</td>
+        <td class="text-center">{{trade.strategy}}</td>
+        <td class="text-center">
+          <span class="green-glow" ng-show="trade.side == 'buy'">Long</span>
+          <span class="red-glow" ng-show="trade.side == 'sell'">Short</span>
+        </td>
+        <td>{{trade.instrument.replace('_', '/')}}</td>
+        <td class="text-right">{{trade.units}}</td>
+        <td>{{trade.stopLoss}}</td>
+        <td>{{trade.takeProfit}}</td>
+        <td>{{trade.trailingStop}}</td>
+        <td class="text-right">{{trade.price}}</td>
+        <td class="text-right">{{trade.current}}</td>
+        <td class="text-right">
+          <span class="green-glow" ng-show="trade.profit.base >= 0">£{{trade.profit.base}}</span>
+          <span class="red-glow" ng-show="trade.profit.base < 0">-£{{trade.profit.base.toString().replace('-', '')}}</span>        	
+        </td>
+        <td class="text-right">
+          <span class="green-glow" ng-show="trade.profit.percent >= 0">{{trade.profit.percent}}%</span>
+          <span class="red-glow" ng-show="trade.profit.percent < 0">{{trade.profit.percent}}%</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+{{{{/angular}}}}
+
+{{> scripts}}
+{{> socket-io}}
+
+<script src="/js/trades/monitor.js"></script>

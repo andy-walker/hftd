@@ -6,8 +6,8 @@ global.sprintf  = require("sprintf-js").sprintf;
 global.vsprintf = require("sprintf-js").vsprintf;
 global.strftime = require('strftime');
 
-require('./components/functions');
-require('./components/console');
+require('./core/functions');
+require('./core/console');
 
 hftd.config = new require(__dirname + '/config/config.json');
 

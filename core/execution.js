@@ -71,6 +71,14 @@ var execution = function() {
 
         hftd.restAPI.client.closeTrade(accountId, tradeId, function(error, confirmation) {
             
+            // tmp debugging
+            var confirmationError = false;
+            if (!('instrument' in confirmation) || !('pl' in confirmation)) {
+                hftd.warning('Unexpected confirmation data ...');
+                console.log(confirmation);
+                confirmationError = true;
+            }
+
             if (error) {
                 
                 hftd.error(error);
@@ -80,13 +88,17 @@ var execution = function() {
                     delete execution.trades[tradeId];
                 }
 
+            // todo: remove this - should be done on TRADE_CLOSE event
             } else {
             
                 if (tradeId in execution.trades) {
-
+                    var strategy = execution.trades[tradeId].strategy;
                     hftd.strategist.archiveTrade({tradeId: tradeId}, execution.trades[tradeId]);
                     delete execution.trades[tradeId];
                     hftd.strategist.updateStats();
+
+                    if (!confirmationError)
+                        hftd.stats.updateAccountBalanceHistory(strategy, confirmation.instrument, confirmation.pl);
 
                 }
 
@@ -116,8 +128,8 @@ var execution = function() {
      */
     execution.getInstruments = function(callback) {
         
-        var account = hftd.config.account;
-        var client  = hftd.restAPI.client;
+        var account = hftd.config.master;
+        var client  = hftd.restAPI.master;
 
         client.getInstruments(account.accountId, function(error, instruments) {
             
@@ -191,6 +203,14 @@ var execution = function() {
     
     };
 
+    execution.getPipAmount = function(instrument) {
+
+        if (!(instrument in execution.instruments))
+            return hftd.error(sprintf("Unknown instrument '%s' in execution.getPipAmount()", instrument));
+        return execution.instruments[instrument].pip;       
+    
+    };
+
     /**
      * Query whether market is open for the requested instrument
      */
@@ -206,7 +226,7 @@ var execution = function() {
      */
     execution.getQuotes = function(callback) {
         
-        hftd.restAPI.client.getPrice(_.keys(execution.instruments), function(error, prices) {
+        hftd.restAPI.master.getPrice(_.keys(execution.instruments), function(error, prices) {
             
             if (error)
                 return callback(error);
@@ -242,6 +262,9 @@ var execution = function() {
 
                 hftd.log(sprintf('Closed trade %s on %s (%s)', transaction.tradeId, transaction.instrument, reason));
                 
+                if (transaction.tradeId && 'webserver' in hftd)
+                    hftd.webserver.subscriptions.tradeClose(transaction.tradeId);
+
                 if (transaction.tradeId in execution.trades) {
 
                     var trade    = execution.trades[transaction.tradeId];
@@ -251,7 +274,8 @@ var execution = function() {
                     delete execution.trades[transaction.tradeId];
                     
                     execution.account[strategy].balance = transaction.accountBalance;
-                    hftd.strategist.updateStats();
+                    hftd.strategist.updateStats(); // deprecated, remove
+                    hftd.stats.updateAccountBalanceHistory(strategy, transaction.instrument, transaction.pl);
 
                 }
 
@@ -316,12 +340,20 @@ var execution = function() {
                 params.strategy = strategy;
                 params.tid      = confirmation.tradeOpened.id;
                 params.id       = confirmation.tradeOpened.id;
+                params.price    = confirmation.price;
+
+                params.stopLoss     = confirmation.tradeOpened.stopLoss;
+                params.takeProfit   = confirmation.tradeOpened.takeProfit;
+                params.trailingStop = confirmation.tradeOpened.trailingStop;
 
                 execution.trades[confirmation.tradeOpened.id] = params;
 
                 // perform trade mirroring if component enabled
                 if ('mirror' in hftd)
                     hftd.mirror.openTrades(params);
+
+                if ('webserver' in hftd)
+                    hftd.webserver.subscriptions.tradeOpen(params);
 
             } else {
                 hftd.error('Unable to open trade on ' + params.instrument);
@@ -378,7 +410,6 @@ var execution = function() {
                 callback(error);
             }
             // if all went ok, schedule refresh every 60 seconds
-            console.log('Adding refresher job');
             hftd.scheduler.addJob("0 * * * * *", execution.refreshData);
             callback();
         });

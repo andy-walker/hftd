@@ -20,6 +20,19 @@ var restAPI = function() {
             accessToken: account.accessToken
         });
 
+        // use master (live system) for retrieving price information etc,
+        // as it's more reliable
+        if ('master' in hftd.config) {
+            var master = hftd.config.master;
+            environment = master.accountType == 'demo' ? 'practice' : 'live';
+            restAPI.master = new OANDAAdapter({
+                environment: environment,
+                accessToken: master.accessToken
+            });
+        } else {
+            restAPI.master = restAPI.client;
+        }
+
         callback();
     
     };

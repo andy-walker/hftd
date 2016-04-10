@@ -1,0 +1,33 @@
+{
+    "/": {
+        "view":        "dashboard",
+        "title":       "Dashboard",
+        "description": "Overview of system performance"
+    },
+
+    "/strategy/configuration/": {
+        "title":       "Strategy Configuration",
+        "description": "Control / configure running strategies"
+    },
+
+    "/strategy/metrics/": {
+        "title":       "Strategy Metrics",
+        "description": "View profit/loss of running strategies and configure mirroring",
+        "controller":  "strategy/metrics"
+    },
+
+    "/strategy/backtest/":      null,
+    "/strategy/editor/": {
+        "title": "Strategy Editor"
+    },
+    "/trades/in-progress/": {
+        "title":       "Trades in Progress",
+        "description": "Overview of currently open trades"
+    },
+    "/trades/history/":         null,
+    "/configuration/global/":   null,
+    "/configuration/modules/":  null,
+    "/configuration/accounts/": null,
+    "/configuration/brokers/":  null
+
+}

@@ -22,10 +22,15 @@ $data = [];
 $min = null;
 $max = null;
 
+$exclude = isset($_GET['exclude']) ? explode(',', $_GET['exclude']) : [];
+
+
 # process data into params for highcharts
 foreach ($file as $line) {
     $date = array_shift($line);
     foreach (array_keys($algos) as $key) {
+        if (in_array($algos[$key], $exclude))
+            continue;
         $data[$algos[$key]][] = [
             'date' => date('Y, m, d, H, i, s', strtotime($date)),
             'balance' => $line[$key]

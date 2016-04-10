@@ -1,0 +1,15 @@
+Name: Oanda Integration
+Description: Broker integration for Oanda
+Group: Broker Integration
+
+Components:
+
+    - Type:  datasource
+      Label: Oanda
+      Code:  oanda
+      File:  datasource.js
+
+    - Type:  execution
+      Label: Oanda
+      Code:  oanda
+      File:  execution.js

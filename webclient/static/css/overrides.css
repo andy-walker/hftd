@@ -1,0 +1,44 @@
+@import url("https://fonts.googleapis.com/css?family=Open+Sans:400,600,700,300");
+
+body {
+    font-family:"Open Sans", sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+	font-family:"Open Sans", sans-serif;
+	font-weight:300;
+}
+
+.navbar-brand {
+	background:url('images/logo2.png') left center no-repeat;
+	padding-left:52px;
+}
+
+.page-header {
+	margin-top:48px;
+	padding-bottom:5px;
+}
+
+.lead {
+	margin-bottom:14px;
+	color:#999;
+}
+
+.graph-container {
+	border-bottom: 1px solid #1c1e22;
+	padding-bottom:14px;
+}
+
+.graph-timeframe-dropdown {
+
+}
+
+.green-glow {
+	color: #02ee87;
+    text-shadow: 1px 1px 7px #02ee87;
+}
+
+.red-glow {
+	color: #ce3636;
+    text-shadow: 1px 1px 7px #ce3636;
+}

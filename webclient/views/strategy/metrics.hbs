@@ -1,0 +1,92 @@
+{{#each strategies}}
+<div class="graph-container">
+  <div class="btn-group pull-right graph-timeframe-dropdown">
+    <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      1 week <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+      <li><a href="#">2 weeks</a></li>
+      <li><a href="#">1 month</a></li>
+      <li><a href="#">2 months</a></li>
+      <li><a href="#">3 months</a></li>
+      <li><a href="#">6 months</a></li>
+    </ul>
+  </div>
+  <h3>{{@key}}</h3>
+  <div id="strategy-{{@key}}"></div>
+</div>
+{{/each}}
+
+{{> scripts}}
+
+<script src="/bower_components/highcharts/highcharts.js"></script>
+
+{{#each strategies}}
+<script>
+  $(function() {
+    $('#strategy-{{@key}}').highcharts({
+        chart: {
+            type: 'line',
+            height:200,
+            backgroundColor: "#272b30",
+            style: {
+                fontFamily: "'Open Sans'",
+                color: "#999"
+            }
+        },
+        title: {
+            text: ''
+        },
+        legend: {
+            enabled: false
+        },
+        credits: {
+            enabled: false
+        },
+        xAxis: {
+            type: 'datetime',
+            dateTimeLabelFormats: { // don't display the dummy year
+                month: '%e. %b',
+                year: '%b'
+            },
+            lineColor: "#666"
+        },
+        yAxis: {
+            title: '',
+            min: {{this.min}},
+            max: {{this.max}},
+            gridLineWidth: 0
+        },
+        tooltip: {
+            headerFormat: '<b>{series.name}</b><br>',
+            pointFormat: '{point.x:%e. %b}: £{point.y:.2f}'
+        },
+
+        plotOptions: {
+            line: {
+                marker: {
+                    enabled: false
+                },
+                color: "#65BBF7",
+                shadow: {
+                    color:"#48B4F7",
+                    offsetX: 0,
+                    offsetY: 0,
+                    opacity: 0.2,
+                    width: 5
+                }
+            }
+        },
+
+        series: [{
+            name: '{{@key}}',
+            data: [
+              {{#each this.balance}}
+                [Date.UTC({{this.[0]}}), {{this.[1]}}],
+              {{/each}}
+            ]
+        }]
+    });
+});
+</script>
+{{/each}}

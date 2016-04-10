@@ -10,6 +10,71 @@ var mirror = function() {
     mirror.trades   = {};
     mirror.accounts = {};
 
+    /**
+     * Close single trade on instrument on the specified account
+     */
+    mirror.closeSingle = function(accountName, instrument, callback) {
+
+        var accountId = mirror.getAccountId(accountName);
+
+        if (!accountId) {
+            var error = sprintf("Unable to get account id for '%s' while attempting to close mirrored trade", accountName);
+            hftd.error(error);
+            return callback(error);
+        }
+
+        var tradeId = mirror.getTradeId(accountName, instrument);
+
+        if (!tradeId) {
+            var error = sprintf("Unable to get trade id for '%s' on '%s' while attempting to close mirrored trade", instrument, accountName);
+            hftd.error(error);
+            return callback(error);
+        }
+
+        var masterTradeId = mirror.getMasterTradeId(tradeId);
+
+        if (!masterTradeId) {
+            var error = sprintf("Unable to get master trade id for '%s' on '%s' while attempting to close mirrored trade", tradeId, accountName);
+            hftd.error(error);
+            return callback(error);
+        }
+
+        var client = mirror.client[accountName];
+
+        client.closeTrade(accountId, tradeId, function(error, confirmation) {
+            
+            if (error) {
+                
+                hftd.error(error);
+                
+                if (error == 'Trade not found') {
+                    hftd.log('Removing local entry');
+                    delete mirror.trades[masterTradeId][accountName];
+                }
+
+            } else {
+
+                if (masterTradeId in mirror.trades && accountName in mirror.trades[masterTradeId]) {
+
+                    // not sure if we want to archive mirrored trades or not? probably at some point
+                    // hftd.strategist.archiveTrade({tradeId: tradeId}, execution.trades[tradeId]);
+                    delete mirror.trades[masterTradeId][accountName];
+
+                }
+
+                hftd.log(sprintf("Mirrored position closed (%s on '%s') - [ %s ]", tradeId, accountName, color('OK', 'green')));
+
+            }
+
+            if (!Object.keys(mirror.trades[masterTradeId]).length)
+                delete mirror.trades[masterTradeId];
+
+            callback(null, sprintf("%s position closed on '%s'"));
+        
+        }); 
+
+    };
+
     mirror.closeTrades = function(masterTradeId, jobCallback) {
         
         if (!(masterTradeId in mirror.trades))
@@ -123,6 +188,21 @@ var mirror = function() {
     };
 
     /**
+     * Search trades data for tradeId when supplied with accountName / instrument
+     */
+    mirror.getTradeId = function(accountName, instrument) {
+
+        for (var masterTradeId in hftd.execution.trades) {
+            var trade = hftd.execution.trades[masterTradeId];
+            if (trade.instrument == instrument) {
+                if (masterTradeId in mirror.trades && accountName in mirror.trades[masterTradeId])
+                    return mirror.trades[masterTradeId][accountName];
+            }
+        }
+
+    };
+
+    /**
      * Determine if mirroring enabled for a given strategy
      */
     mirror.isEnabled = function(strategy) {
@@ -176,6 +256,9 @@ var mirror = function() {
 
         params.type = 'market';
 
+        if (params.units < 1)
+            params.units = 1;
+
         client.createOrder(accountId, params, function(error, confirmation) {
             
             if (error)
@@ -224,6 +307,8 @@ var mirror = function() {
 
             var instrument = params.instrument;
             var quote      = chartist.getQuote(instrument);
+            var pip        = execution.getPipAmount(instrument);
+            var takeProfit;
 
             if (params.side == 'buy') {
 
@@ -232,7 +317,29 @@ var mirror = function() {
                 var oppositePrice = quote.bid;
                 var gbpAmount     = account.balance * ((config.positionSize * multiplier) / 100);
                 var units         = Math.floor(chartist.convert(gbpAmount, 'GBP', instrument.split('_')[0]) * 20);
-                var stopLoss      = execution.calculateStopLoss('buy', oppositePrice, config.stopLoss);
+                
+                if (
+                    params.strategy == 'PS2-F15'    || params.strategy == 'PS2-B15'   || 
+                    params.strategy == 'PS2-WTI'    || params.strategy == 'PS2-HS15'  || 
+                    params.strategy == 'PS2-15CBL'  || params.strategy == 'PS2-15BCO' || 
+                    params.strategy == 'PS2-15GAS'  || params.strategy == 'PS2-ATRF'  ||
+                    params.strategy == 'PS2-ATRD60' || params.strategy == 'PS2-F15A'  ||
+                    params.strategy == 'MPX5'
+                ) {
+                    var stopLoss      = quotePrice - (config.stopLoss * pip);
+                    
+                    if (params.strategy == 'PS2-ATRF' || params.strategy == 'PS2-ATRD60') {
+                        var atrMultiplier = hftd.strategist.strategies[params.strategy].executionPrice[instrument].atr / config.atrDivisor;
+                        var takeProfit = quotePrice + (config.takeProfit * pip * atrMultiplier);
+                    } else if (params.strategy == 'PS2-F15A') {
+                        var atrMultiplier = 1 + (hftd.strategist.strategies[params.strategy].executionPrice[instrument].atr / config.atrDivisor);
+                        var takeProfit = quotePrice + (config.takeProfit * pip * atrMultiplier);                        
+                    } else
+                        var takeProfit = quotePrice + (config.takeProfit * pip);
+
+                } else {
+                    var stopLoss = execution.calculateStopLoss('buy', oppositePrice, config.stopLoss);
+                }
 
             } else if (params.side == 'sell') {
 
@@ -241,20 +348,48 @@ var mirror = function() {
                 var oppositePrice = quote.ask;
                 var gbpAmount     = account.balance * ((config.positionSize * multiplier) / 100);
                 var units         = Math.floor(chartist.convert(gbpAmount, 'GBP', instrument.split('_')[0]) * 20);
-                var stopLoss      = execution.calculateStopLoss('sell', oppositePrice, config.stopLoss);
+                
+                if (
+                    params.strategy == 'PS2-F15'    || params.strategy == 'PS2-B15'   || 
+                    params.strategy == 'PS2-WTI'    || params.strategy == 'PS2-HS15'  || 
+                    params.strategy == 'PS2-15CBL'  || params.strategy == 'PS2-15BCO' || 
+                    params.strategy == 'PS2-15GAS'  || params.strategy == 'PS2-ATRF'  ||
+                    params.strategy == 'PS2-ATRD60' || params.strategy == 'PS2-F15A'  ||
+                    params.strategy == 'MPX5'
+                ) {                    
 
+                    var stopLoss   = quotePrice + (config.stopLoss * pip);
+                    
+                    if (params.strategy == 'PS2-ATRF' || params.strategy == 'PS2-ATRD60') {
+                        var atrMultiplier = hftd.strategist.strategies[params.strategy].executionPrice[instrument].atr / config.atrDivisor;
+                        var takeProfit = quotePrice - (config.takeProfit * pip * atrMultiplier);
+                    } else if (params.strategy == 'PS2-F15A') {
+                        var atrMultiplier = 1 + (hftd.strategist.strategies[params.strategy].executionPrice[instrument].atr / config.atrDivisor);
+                        var takeProfit = quotePrice - (config.takeProfit * pip * atrMultiplier);                        
+                    } else
+                        var takeProfit = quotePrice - (config.takeProfit * pip);
+
+                } else {
+                    var stopLoss   = execution.calculateStopLoss('sell', oppositePrice, config.stopLoss);
+                }
+            
             }
 
             // adjust stop-loss to correct precision
             var precision = execution.getPipPrecision(instrument);
             stopLoss      = stopLoss.toFixed(precision);
 
-            mirror.openTrade(accountName, params.id, {
+            var tradeParams = {
                 side:       params.side,
                 instrument: instrument,
                 units:      units,
                 stopLoss:   stopLoss
-            });
+            };
+
+            if (takeProfit)
+                tradeParams.takeProfit = takeProfit.toFixed(precision);
+
+            mirror.openTrade(accountName, params.id, tradeParams);
 
         }
 

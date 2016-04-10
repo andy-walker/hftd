@@ -2,7 +2,6 @@
  * Basic db interface
  * Handles connection pooling and parameter escaping
  */
- 
 var db = function(config) {
 
     var db = this;
@@ -11,12 +10,12 @@ var db = function(config) {
 
     db.pool  = db.mysql.createPool({
 
-        connectionLimit: config.connectionLimit !== undefined ? config.connectionLimit : 100, 
+        connectionLimit: 'connectionLimit' in config ? config.connectionLimit : 100, 
         host:            config.host,
         user:            config.user,
         password:        config.password,
         database:        config.name,
-        debug:           config.debug !== undefined && config.debug ? true : false
+        debug:           'debug' in config && config.debug
     
     });
 
@@ -48,7 +47,7 @@ var db = function(config) {
             }   
 
             params = params.map(function(param) {
-                return sprintf("'%'", db.mysql.escape(param));
+                return sprintf("'%s'", db.mysql.escape(param));
             });
 
             connection.query(vsprintf(query, params), function(error, results) {
@@ -67,6 +66,6 @@ var db = function(config) {
 
 };
 
-module.exports = function() {
-    return new db();
+module.exports = function(config) {
+    return new db(config);
 };
